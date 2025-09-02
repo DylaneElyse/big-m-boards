@@ -9,13 +9,13 @@ const Footer = () => (
             </div>
             <div className="text-center md:text-right">
                 <a
-                    href="mailto:contact@bigmboards.com"
+                    href="mailto:bigmboards@gmail.com"
                     className="text-blue-400 hover:underline"
                 >
-                    Contact Us
+                    Contact
                 </a>
                 <div className="text-xs mt-1">
-                    123 Main St, Anytown, USA
+                    Calgary, Alberta, Canada
                 </div>
             </div>
         </div>
