@@ -1,4 +1,4 @@
-// /app/listings/page.js
+// /listings/page.js
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -16,7 +16,7 @@ export default async function ListingsPage() {
           All Listings
         </h1>
         <Link 
-          href="/admin/listings/new" 
+          href="/admin/listings/create" 
           className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           + Create New Listing
@@ -36,8 +36,9 @@ export default async function ListingsPage() {
         <div className="grid grid-cols-1 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6">
           {listings.map((listing) => (
             <Link 
-              href={`/listings/${listing.id}`} 
-              key={listing.id} 
+              // THE ONLY CHANGE IS HERE: Use the new 'slug' for the URL
+              href={`/admin/listings/${listing.slug}`} 
+              key={listing.id} // Keep using the ID for the key, as it's guaranteed to be unique and stable
               className="group block border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-200"
             >
               <div className="relative w-full h-48 bg-gray-200">

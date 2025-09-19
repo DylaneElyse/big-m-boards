@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+// Assuming your slugify function is in a utils file
+import slugify from '@/utils/createSlug'; // Make sure this path is correct for your project
 import {
   createListing,
   updateListing,
@@ -11,18 +12,14 @@ import {
 } from '@/lib/supabase/api';
 
 export async function createListingAction(prevState, formData) {
-  // 1. Create the client ONCE for the entire action.
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    console.error("Server Action failed: No authenticated user found.");
     return { message: 'Authentication Error: You must be logged in to create a listing.' };
   }
   
-  console.log("Server Action initiated by user:", user.email);
-
-  // --- File Upload Logic (no changes here) ---
+  // --- File Upload Logic (no changes) ---
   const images = formData.getAll('images').filter(file => file.size > 0);
   const imageUrls = [];
 
@@ -46,9 +43,11 @@ export async function createListingAction(prevState, formData) {
     }
   }
 
-  // --- Prepare and Validate Data (no changes here) ---
+  // --- Prepare and Validate Data ---
+  const title = formData.get('title');
   const rawData = {
-    title: formData.get('title'),
+    title: title,
+    slug: slugify(title), // This part was already correct
     description: formData.get('description'),
     is_available: formData.get('is_available') === 'on',
     image_urls: imageUrls.length > 0 ? imageUrls : null,
@@ -64,57 +63,25 @@ export async function createListingAction(prevState, formData) {
     };
   }
 
-  // 3. Call the API function to insert data
+  // --- Call the API function to insert data ---
   try {
-    console.log("Creating listing with data:", validatedFields.data);
-    console.log("Authenticated user ID:", user.id);
-    console.log("User ID in listing data:", validatedFields.data.user_id);
-    console.log("User IDs match:", user.id === validatedFields.data.user_id);
-    
-    // Debug: Test a simple query to see if auth context works
-    const { data: authTest, error: authError } = await supabase
-      .from('listings')
-      .select('id')
-      .limit(1);
-    
-    if (authError) {
-      console.log("Auth context test error:", authError);
-    } else {
-      console.log("Auth context test successful:", authTest);
-    }
-    
-    // Debug: Test if we can query our own listings
-    const { data: ownListings, error: ownError } = await supabase
-      .from('listings')
-      .select('id')
-      .eq('user_id', user.id)
-      .limit(1);
-    
-    if (ownError) {
-      console.log("Own listings query error:", ownError);
-    } else {
-      console.log("Own listings query successful:", ownListings);
-    }
-    
-    // THE FIX: Pass the existing, authenticated `supabase` client to the function.
     await createListing(supabase, validatedFields.data); 
-
   } catch (error) {
     console.error("Full error object:", error);
+    // CHANGE: Add specific error handling for duplicate slugs
+    if (error.code === '23505') { // Postgres code for unique violation
+        return { message: 'Database Error: A listing with this title already exists. Please choose a different title.' };
+    }
     return { message: `Database Error: ${error.message}` };
   }
 
-  // 4. Revalidate and redirect
-  console.log("Listing created successfully. Revalidating paths and redirecting.");
-  revalidatePath('/admin/listings');
-  redirect('/admin/listings');
+  // --- Revalidate and Return Success State ---
+  revalidatePath('/admin/listings', 'layout'); // Revalidate list and all detail pages
+  return { success: true, message: 'Listing created successfully!' };
 }
 
 
-// --- UPDATE AND DELETE ACTIONS (Also updated) ---
-
 export async function updateListingAction(id, prevState, formData) {
-  // THE FIX: Create the client once and check for an authenticated user.
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -122,32 +89,41 @@ export async function updateListingAction(id, prevState, formData) {
     return { message: 'Authentication Error: You must be logged in to update a listing.' };
   }
 
-  // --- Validation Logic ---
+  // CHANGE: Generate a new slug when the title is updated
+  const title = formData.get('title');
   const rawData = {
-    title: formData.get('title'),
+    title: title,
+    slug: slugify(title),
     description: formData.get('description'),
     is_available: formData.get('is_available') === 'on',
   };
-  // Note: We use .partial() because the user_id is not being updated here.
+
+  // We use .partial() because not all schema fields are being submitted here (e.g., user_id)
   const validatedFields = listingSchema.partial().safeParse(rawData);
+
   if (!validatedFields.success) {
     return { errors: validatedFields.error.flatten().fieldErrors };
   }
   
   try {
-    // THE FIX: Pass the authenticated `supabase` client to the update function.
     await updateListing(supabase, id, validatedFields.data);
   } catch (error) {
+    // CHANGE: Add specific error handling for duplicate slugs
+    if (error.code === '23505') { 
+        return { message: 'Database Error: Another listing with this title already exists. Please choose a different title.' };
+    }
     return { message: `Database Error: ${error.message}` };
   }
 
-  revalidatePath('/admin/listings');
-  revalidatePath(`/admin/listings/${id}`);
-  redirect('/listings');
+  // CHANGE: Updated revalidation and return a success message instead of redirecting
+  revalidatePath('/admin/listings', 'layout'); // This revalidates the list and all slug-based detail pages.
+  revalidatePath('/listings', 'layout'); // Also revalidate public pages if they exist
+
+  return { success: true, message: 'Listing updated successfully!' };
 }
 
+// NO CHANGES NEEDED for deleteListingAction as it operates on the ID.
 export async function deleteListingAction(id) {
-  // THE FIX: Create the client once and check for an authenticated user.
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -156,9 +132,8 @@ export async function deleteListingAction(id) {
   }
 
   try {
-    // THE FIX: Pass the authenticated `supabase` client to the delete function.
     await deleteListing(supabase, id);
-    revalidatePath('/admin/listings');
+    revalidatePath('/admin/listings', 'layout'); // Use 'layout' for consistency
     return { success: true, message: 'Listing deleted.' };
   } catch (error) {
     return { success: false, message: `Database Error: ${error.message}` };
