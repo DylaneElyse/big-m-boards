@@ -1,55 +1,91 @@
 "use client";
 
-// NEW: Import useState and ChangeEvent for handling file previews
-import { useActionState, useEffect, useRef, useState, ChangeEvent } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // NEW: Use Next.js Image for optimized previews
+import Image from 'next/image';
 import { createListingAction } from '@/app/actions';
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-    >
-      {pending ? 'Creating...' : 'Create Listing'}
-    </button>
-  );
-}
+// The initial state for our form's response
+const initialState = { message: null, errors: {}, success: false };
 
 export default function CreateListingForm() {
-  const initialState = { message: null, errors: {}, success: false };
-  const [state, dispatch] = useActionState(createListingAction, initialState);
-  const formRef = useRef(null);
-
-  // NEW: State to hold the URLs for the selected image previews
+  // State for the server action's response
+  const [formState, setFormState] = useState(initialState);
+  // State for managing the actual File objects to be uploaded
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  // State for the temporary URLs used for previews
   const [previews, setPreviews] = useState([]);
+  // State to manually track submission status
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // NEW: Handler for when the user selects files
+  const formRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // --- NEW LOGIC: Handle appending new files ---
   const handleImageChange = (e) => {
-    // Revoke the old URLs to prevent memory leaks
-    previews.forEach(URL.revokeObjectURL);
-
     if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      // Create a temporary, local URL for each selected file
-      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
-      setPreviews(newPreviews);
+      const newFiles = Array.from(e.target.files);
+
+      // Append new files to our existing state
+      setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
+
+      // Create new preview URLs and append them
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
+    }
+
+    // Clear the file input so the user can select the same file again if they remove it
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
     }
   };
 
+  // --- NEW LOGIC: Handle removing a selected image ---
+  const handleRemoveImage = (indexToRemove) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(previews[indexToRemove]);
+
+    // Filter out the removed file and its preview URL
+    setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
+    setPreviews(prevPreviews => prevPreviews.filter((_, index) => index !== indexToRemove));
+  };
+  
+  // --- NEW LOGIC: Manual form submission handler ---
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setFormState(initialState); // Reset previous messages
+
+    // 1. Create FormData from the form's text fields
+    const formData = new FormData(event.currentTarget);
+    
+    // 2. Remove the default 'images' entry, as it only holds the last selection
+    formData.delete('images');
+
+    // 3. Append all files from our state to the FormData object
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach(file => {
+        formData.append('images', file);
+      });
+    }
+
+    // 4. Call the server action with the manually constructed FormData
+    const result = await createListingAction(initialState, formData);
+    
+    setFormState(result);
+    setIsSubmitting(false);
+  };
+  
+  // Effect to reset the form after a successful submission
   useEffect(() => {
-    if (state.success) {
+    if (formState.success) {
       formRef.current?.reset();
-      // NEW: Clear the image previews on successful submission
+      setSelectedFiles([]);
       setPreviews([]);
     }
-  }, [state.success]);
+  }, [formState.success, formRef]);
   
-  // NEW: A cleanup effect to prevent memory leaks when the component unmounts
+  // A cleanup effect to prevent memory leaks when the component unmounts
   useEffect(() => {
     return () => {
       previews.forEach(URL.revokeObjectURL);
@@ -57,42 +93,58 @@ export default function CreateListingForm() {
   }, [previews]);
 
   return (
-    <form ref={formRef} action={dispatch} className="space-y-6">
-      {/* Title Field (no changes) */}
+    // We now use `onSubmit` instead of `action`
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+      {/* Title & Description Fields (no changes) */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
         <input id="title" name="title" type="text" required className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"/>
-        {state.errors?.title && <p className="mt-2 text-sm text-red-600">{state.errors.title[0]}</p>}
+        {formState.errors?.title && <p className="mt-2 text-sm text-red-600">{formState.errors.title[0]}</p>}
       </div>
-
-      {/* Description Field (no changes) */}
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
         <textarea id="description" name="description" rows={4} className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"/>
-        {state.errors?.description && <p className="mt-2 text-sm text-red-600">{state.errors.description[0]}</p>}
+        {formState.errors?.description && <p className="mt-2 text-sm text-red-600">{formState.errors.description[0]}</p>}
+      </div>
+      
+      {/* Price Field */}
+      <div>
+        <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price ($)</label>
+        <input 
+          id="price" 
+          name="price" 
+          type="number" 
+          step="0.01" 
+          min="0" 
+          placeholder="0.00"
+          className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        />
+        {formState.errors?.price && <p className="mt-2 text-sm text-red-600">{formState.errors.price[0]}</p>}
       </div>
       
       {/* Image Upload Field */}
       <div>
-        <label htmlFor="images" className="block text-sm font-medium text-gray-700">Images</label>
+        <label htmlFor="images" className="block text-sm font-medium text-gray-700">
+          Images (select multiple or add more later)
+        </label>
         <input
           id="images"
           name="images"
           type="file"
           multiple
           accept="image/*"
-          // NEW: Attach the onChange handler
+          ref={fileInputRef}
           onChange={handleImageChange}
           className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
         />
-        {state.errors?.image_urls && <p className="mt-2 text-sm text-red-600">{state.errors.image_urls[0]}</p>}
+        {formState.errors?.image_urls && <p className="mt-2 text-sm text-red-600">{formState.errors.image_urls[0]}</p>}
       </div>
 
-      {/* --- NEW: Image Preview Grid --- */}
+      {/* Image Preview Grid with Remove Buttons */}
       {previews.length > 0 && (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {previews.map((src, index) => (
-            <div key={index} className="relative aspect-square w-full rounded-md overflow-hidden border">
+            <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
               <Image
                 src={src}
                 alt={`Preview ${index + 1}`}
@@ -100,6 +152,16 @@ export default function CreateListingForm() {
                 className="object-cover"
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
               />
+              <button
+                type="button"
+                onClick={() => handleRemoveImage(index)}
+                className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
+                aria-label="Remove image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           ))}
         </div>
@@ -111,12 +173,12 @@ export default function CreateListingForm() {
         <label htmlFor="is_available" className="text-sm font-medium text-gray-700">Is this listing available?</label>
       </div>
       
-      {/* Action Buttons & Messages (no changes) */}
+      {/* Action Buttons & Messages */}
       <div className="flex items-center justify-between gap-4 pt-4 border-t border-gray-200">
         <div className="flex-grow">
-          {state.message && (
-            <p className={`text-sm ${state.success ? 'text-green-600' : 'text-red-600'}`}>
-              {state.message}
+          {formState.message && (
+            <p className={`text-sm ${formState.success ? 'text-green-600' : 'text-red-600'}`}>
+              {formState.message}
             </p>
           )}
         </div>
@@ -124,7 +186,13 @@ export default function CreateListingForm() {
           <Link href="/admin/listings" className="text-sm font-medium text-gray-600 hover:text-gray-900 py-2 px-4 rounded-md">
             Cancel
           </Link>
-          <SubmitButton />
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            {isSubmitting ? 'Creating...' : 'Create Listing'}
+          </button>
         </div>
       </div>
     </form>

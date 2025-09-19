@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { getListingBySlug } from '@/lib/supabase/api';
+import ImageGallery from '@/components/ImageGallery';
+import ContactButton from '@/components/ContactButton';
 
 // This line is important for dynamic pages using server functions
 export const dynamic = 'force-dynamic';
@@ -43,57 +45,71 @@ export default async function PublicListingDetailPage({ params }) {
   });
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-6">
+    <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <Link 
-          href="/listings"
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 touch-target"
         >
           &larr; Back to all listings
         </Link>
+        {/* Contact Button - Hidden on mobile, shown in details section instead */}
+        <div className="hidden sm:block">
+          <ContactButton size="default" />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
         {/* Image Section */}
-        <div className="relative aspect-square w-full rounded-lg overflow-hidden border">
-          {listing.image_urls && listing.image_urls.length > 0 ? (
-            <Image
-              src={listing.image_urls[0]}
-              alt={listing.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
-              No Image
-            </div>
-          )}
+        <div className="w-full">
+          <ImageGallery 
+            images={listing.image_urls ? JSON.parse(JSON.stringify(listing.image_urls)) : []} 
+            altText={listing.title} 
+          />
         </div>
         
         {/* Details Section */}
-        <div className="flex flex-col gap-y-6">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+        <div className="flex flex-col gap-y-4 sm:gap-y-6">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 leading-tight">
             {listing.title}
           </h1>
 
-          <div>
-            <h2 className="text-sm font-medium text-gray-500">Status</h2>
-            <span className={`mt-1 inline-block px-3 py-1 text-sm font-semibold rounded-full ${
-                   listing.is_available 
-                     ? 'bg-green-100 text-green-800' 
-                     : 'bg-red-100 text-red-800'
-                 }`}
-            >
-              {listing.is_available ? 'Available' : 'Unavailable'}
-            </span>
+          {/* Mobile-first status and price row */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            <div>
+              <h2 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Status</h2>
+              <span className={`inline-block px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold rounded-full ${
+                     listing.is_available 
+                       ? 'bg-green-100 text-green-800' 
+                       : 'bg-red-100 text-red-800'
+                   }`}
+              >
+                {listing.is_available ? 'Available' : 'Unavailable'}
+              </span>
+            </div>
+
+            {/* Price Section */}
+            {listing.price && (
+              <div>
+                <h2 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Price</h2>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                  ${parseFloat(listing.price).toFixed(2)}
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
-            <h2 className="text-sm font-medium text-gray-500">Description</h2>
-            <p className="mt-1 text-base text-gray-800 whitespace-pre-wrap">
+            <h2 className="text-xs sm:text-sm font-medium text-gray-500 mb-2">Description</h2>
+            <p className="text-sm sm:text-base text-gray-800 whitespace-pre-wrap leading-relaxed">
                 {listing.description || 'No description provided.'}
             </p>
+          </div>
+
+          {/* Contact Button - Always visible on mobile */}
+          <div className="pt-4 border-t border-gray-200">
+            <ContactButton size="large" className="w-full" />
           </div>
         </div>
       </div>

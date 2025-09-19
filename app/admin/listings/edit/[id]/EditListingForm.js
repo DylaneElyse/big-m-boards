@@ -2,46 +2,151 @@
 
 "use client";
 
-import { useActionState, useEffect } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { updateListingAction } from '@/app/actions';
-
-// A reusable submit button that shows a pending state
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-    >
-      {pending ? 'Saving...' : 'Save Changes'}
-    </button>
-  );
-}
+import Image from 'next/image';
+import { updateListingAction, deleteListingAction } from '@/app/actions';
+import { set } from 'zod';
 
 export default function EditListingForm({ listing }) {
   const router = useRouter();
+  const formRef = useRef(null);
+  const fileInputRef = useRef(null);
   const initialState = { message: null, errors: {}, success: false };
 
-  // Bind the listing's ID to the server action
-  const updateListingWithId = updateListingAction.bind(null, listing.id);
-  const [state, dispatch] = useActionState(updateListingWithId, initialState);
+  // State for the server action's response
+  const [formState, setFormState] = useState(initialState);
+  // State for managing the actual File objects to be uploaded
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  // State for the temporary URLs used for previews
+  const [previews, setPreviews] = useState([]);
+  // State to manually track submission status
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State to track delete operation
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteClicked, setDeleteClicked] = useState(false);
+  // State for delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // State for current images from database
+  const [currentImages, setCurrentImages] = useState(
+    listing.image_urls ? JSON.parse(JSON.stringify(listing.image_urls)) : []
+  );
 
-  // Effect to handle navigation after a successful update
-  useEffect(() => {
-    if (state.success) {
-      // Give user feedback before redirecting
-      alert('Listing updated successfully!'); 
-      // Redirect to the slug-based admin view page
-      router.push(`/admin/listings/${listing.slug}`);
+  // Handle appending new files
+  const handleImageChange = (e) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+
+      // Append new files to our existing state
+      setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
+
+      // Create new preview URLs and append them
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
     }
-  }, [state, listing.slug, router]);
+
+    // Clear the file input so the user can select the same file again if they remove it
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Handle removing a selected new image
+  const handleRemoveNewImage = (indexToRemove) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(previews[indexToRemove]);
+
+    // Filter out the removed file and its preview URL
+    setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
+    setPreviews(prevPreviews => prevPreviews.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Handle removing a current image
+  const handleRemoveCurrentImage = (indexToRemove) => {
+    setCurrentImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Manual form submission handler
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setFormState(initialState); // Reset previous messages
+
+    // Create FormData from the form's text fields
+    const formData = new FormData(event.currentTarget);
+    
+    // Remove the default 'images' entry
+    formData.delete('images');
+
+    // Append all files from our state to the FormData object
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach(file => {
+        formData.append('images', file);
+      });
+    }
+
+    // Add current images as a JSON string so backend knows what to keep
+    formData.append('current_images', JSON.stringify(currentImages));
+
+    // Call the server action with the manually constructed FormData
+    const result = await updateListingAction(listing.id, initialState, formData);
+    
+    setFormState(result);
+    setIsSubmitting(false);
+
+    // Handle successful update
+    if (result.success) {
+      alert('Listing updated successfully!');
+      // Use the new slug from the backend response, fallback to original slug
+      const redirectSlug = result.newSlug || listing.slug;
+      router.push(`/admin/listings/${redirectSlug}`);
+    }
+  };
+
+  // Show delete confirmation modal
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  // Cancel delete
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+  };
+
+  // Confirm delete
+  const handleDeleteConfirm = async () => {
+    setShowDeleteModal(false);
+    setIsDeleting(true);
+    
+    try {
+      // Wait for deletion to complete first
+      const result = await deleteListingAction(listing.id);
+      
+      if (result.success) {
+        // Force a hard refresh to the listings page to ensure fresh data
+        window.location.href = '/admin/listings';
+      } else {
+        // If deletion failed, show error and stay on page
+        setFormState({ success: false, message: `Error deleting listing: ${result.message}` });
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      setFormState({ success: false, message: 'An unexpected error occurred while deleting the listing.' });
+      setIsDeleting(false);
+    }
+  };
+
+  // Cleanup effect to prevent memory leaks when the component unmounts
+  useEffect(() => {
+    return () => {
+      previews.forEach(URL.revokeObjectURL);
+    };
+  }, [previews]);
 
   return (
-    <form action={dispatch} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {/* Title Field */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
@@ -50,10 +155,10 @@ export default function EditListingForm({ listing }) {
           name="title"
           type="text"
           required
-          defaultValue={listing.title} // Pre-populate with existing data
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          defaultValue={listing.title}
+          className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
-        {state.errors?.title && <p className="mt-2 text-sm text-red-600">{state.errors.title[0]}</p>}
+        {formState.errors?.title && <p className="mt-2 text-sm text-red-600">{formState.errors.title[0]}</p>}
       </div>
 
       {/* Description Field */}
@@ -63,11 +168,105 @@ export default function EditListingForm({ listing }) {
           id="description"
           name="description"
           rows={4}
-          defaultValue={listing.description} // Pre-populate with existing data
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          defaultValue={listing.description}
+          className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
-        {state.errors?.description && <p className="mt-2 text-sm text-red-600">{state.errors.description[0]}</p>}
+        {formState.errors?.description && <p className="mt-2 text-sm text-red-600">{formState.errors.description[0]}</p>}
       </div>
+
+      {/* Price Field */}
+      <div>
+        <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price ($)</label>
+        <input
+          id="price"
+          name="price"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="0.00"
+          defaultValue={listing.price || ''}
+          className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        />
+        {formState.errors?.price && <p className="mt-2 text-sm text-red-600">{formState.errors.price[0]}</p>}
+      </div>
+
+      {/* Current Images Display with Remove Buttons */}
+      {currentImages.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Current Images</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {currentImages.map((imageUrl, index) => (
+              <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
+                <Image
+                  src={imageUrl}
+                  alt={`Current image ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveCurrentImage(index)}
+                  className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
+                  aria-label="Remove current image"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Image Upload Field */}
+      <div>
+        <label htmlFor="images" className="block text-sm font-medium text-gray-700">
+          Images (select multiple or add more later)
+        </label>
+        <input
+          id="images"
+          name="images"
+          type="file"
+          multiple
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+          className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
+        />
+        {formState.errors?.image_urls && <p className="mt-2 text-sm text-red-600">{formState.errors.image_urls[0]}</p>}
+      </div>
+
+      {/* New Image Previews with Remove Buttons */}
+      {previews.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">New Images to Add</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {previews.map((src, index) => (
+              <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border border-indigo-300">
+                <Image
+                  src={src}
+                  alt={`Preview ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveNewImage(index)}
+                  className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
+                  aria-label="Remove new image"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Is Available Checkbox */}
       <div className="flex items-center gap-3">
@@ -75,28 +274,129 @@ export default function EditListingForm({ listing }) {
           id="is_available"
           name="is_available"
           type="checkbox"
-          defaultChecked={listing.is_available} // Use defaultChecked for checkboxes
+          defaultChecked={listing.is_available}
           className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
         />
         <label htmlFor="is_available" className="text-sm font-medium text-gray-700">Is this listing available?</label>
       </div>
 
-      {/* --- Action Buttons & Messages --- */}
-      <div className="flex items-center justify-between gap-4 pt-4 border-t border-gray-200">
-        <div className="flex-grow">
-          {state.message && (
-            <p className={`text-sm ${state.success ? 'text-green-600' : 'text-red-600'}`}>
-              {state.message}
+      {/* Action Buttons & Messages */}
+      <div className="pt-4 border-t border-gray-200">
+        {formState.message && (
+          <div className="mb-4">
+            <p className={`text-sm ${formState.success ? 'text-green-600' : 'text-red-600'}`}>
+              {formState.message}
             </p>
-          )}
-        </div>
-        <div className="flex gap-4">
-          <Link href={`/admin/listings/${listing.slug}`} className="text-sm font-medium text-gray-600 hover:text-gray-900 py-2 px-4 rounded-md">
+          </div>
+        )}
+        <div className="flex flex-col sm:flex-row gap-4 sm:justify-end">
+          <Link href={`/admin/listings/${listing.slug}`} className="text-sm font-medium text-gray-600 hover:text-gray-900 py-2 px-4 rounded-md text-center sm:text-left">
             Cancel
           </Link>
-          <SubmitButton />
+          <button
+            type="submit"
+            disabled={isSubmitting || isDeleting}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
+
+      {/* Delete Section */}
+      <div className="pt-6 border-t border-red-200">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex items-start">
+            <div className="ml-3 flex-1 text-center sm:text-left">
+              <div className='flex gap-2 justify-center sm:justify-start items-center'>
+                <Image src="/black-diamond.png" alt="Black Diamond Icon" width={24} height={24} className="inline-block" />
+                <h3 className="text-med font-medium text-black">
+                  Black Diamond Zone!!
+                </h3>
+              </div>
+              {!deleteClicked ? (
+                <div>
+                  <div className="mt-4 text-center sm:text-left">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteClicked(true)}
+                      disabled={isSubmitting || isDeleting}
+                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      Delete Listing
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="mt-2 text-sm text-red-700 text-center sm:text-left">
+                    Are you sure you want to delete this listing? This action cannot be undone.
+                  </div>
+                  <div className="mt-4 flex justify-center sm:justify-start gap-4">
+                    <button
+                      type="button"
+                      onClick={handleDeleteConfirm}
+                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      Confirm Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={handleDeleteCancel}
+            ></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Delete Listing
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      Are you sure you want to delete &quot;{listing.title}&quot;? This action cannot be undone and will permanently remove the listing and all associated data.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteCancel}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

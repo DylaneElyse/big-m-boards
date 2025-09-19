@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { getListingBySlug } from '@/lib/supabase/api';
+import ImageGallery from '@/components/ImageGallery';
 
 // This line is critical to prevent build errors on dynamic routes
 export const dynamic = 'force-dynamic';
@@ -77,22 +78,13 @@ export default async function AdminListingDetailPage({ params }) {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-        {/* Image Section */}
-        <div className="relative aspect-square w-full rounded-lg overflow-hidden border">
-           {listing.image_urls && listing.image_urls.length > 0 ? (
-              <Image
-                src={listing.image_urls[0]}
-                alt={listing.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
-                No Image Provided
-              </div>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Image Section - Remove constraining aspect-square and border */}
+        <div className="w-full">
+          <ImageGallery 
+            images={listing.image_urls ? JSON.parse(JSON.stringify(listing.image_urls)) : []} 
+            altText={listing.title} 
+          />
         </div>
         
         {/* Details Section */}
@@ -106,6 +98,16 @@ export default async function AdminListingDetailPage({ params }) {
             >
               {listing.is_available ? 'Available' : 'Unavailable'}
             </span>
+            {/* Price Section */}
+            {listing.price && (
+              <div>
+                <h2 className="text-sm font-medium text-gray-500">Price</h2>
+                <p className="mt-1 text-2xl font-bold text-gray-900">
+                  ${parseFloat(listing.price).toFixed(2)}
+                </p>
+              </div>
+            )}
+
             <h2 className="text-sm font-medium text-gray-500">Description</h2>
             <p className="mt-1 text-base text-gray-800 whitespace-pre-wrap">
                 {listing.description || 'No description provided.'}

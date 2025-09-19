@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase/client';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 import { useValidatedInput } from '@/hooks/useValidatedInput';
 import { required, isEmail, minLength } from '@/utils/formValidator';
 
-export default function Login() {
+function LoginForm() {
   const emailInput = useValidatedInput('', [required(), isEmail()]);
   const passwordInput = useValidatedInput('', [required(), minLength(6, 'Password must be at least 6 characters')]);
   
-  const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(''); 
   const router = useRouter();
+  const { signIn, loading } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,20 +26,15 @@ export default function Login() {
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailInput.value,
-        password: passwordInput.value,
-      });
+      const { data, error } = await signIn(emailInput.value, passwordInput.value);
 
       if (error) {
         setApiError(error.message);
-        console.error('Supabase Login Error:', error.message);
+        console.error('Login Error:', error.message);
       } else if (data && data.user) {
         console.log('Login successful:', data.user);
-        router.push('/dashboard');
+        router.push('/admin/dashboard');
       } else {
         setApiError('An unexpected error occurred. Please check your credentials or try again.');
         console.warn('Unexpected login response:', data);
@@ -47,8 +42,6 @@ export default function Login() {
     } catch (err) {
       setApiError('An unexpected error occurred. Please try again.');
       console.error('General Login Error:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -132,15 +125,23 @@ export default function Login() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <AuthProvider>
+      <LoginForm />
+    </AuthProvider>
   );
 }
 

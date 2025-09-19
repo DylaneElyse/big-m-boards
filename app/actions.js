@@ -19,23 +19,41 @@ export async function createListingAction(prevState, formData) {
     return { message: 'Authentication Error: You must be logged in to create a listing.' };
   }
   
-  // --- File Upload Logic (no changes) ---
+  // --- File Upload Logic with Service Role Client ---
   const images = formData.getAll('images').filter(file => file.size > 0);
   const imageUrls = [];
 
   if (images.length > 0) {
+    // Create service role client for storage operations to bypass RLS
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SECRET_KEY
+    );
+
     for (const image of images) {
+      // Validate file type
+      if (!image.type.startsWith('image/')) {
+        return { message: `Invalid file type: ${image.name}. Please upload only image files.` };
+      }
+
+      // Convert File to ArrayBuffer for proper upload
+      const arrayBuffer = await image.arrayBuffer();
       const fileName = `${Date.now()}-${image.name}`;
-      const { data, error } = await supabase.storage
+      
+      const { data, error } = await serviceSupabase.storage
         .from('listing-images') 
-        .upload(fileName, image);
+        .upload(fileName, arrayBuffer, {
+          contentType: image.type,
+          upsert: false
+        });
 
       if (error) {
         console.error('Storage Error:', error);
-        return { message: 'Failed to upload image.' };
+        return { message: `Failed to upload image: ${error.message}` };
       }
       
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = serviceSupabase.storage
         .from('listing-images')
         .getPublicUrl(data.path);
         
@@ -45,10 +63,12 @@ export async function createListingAction(prevState, formData) {
 
   // --- Prepare and Validate Data ---
   const title = formData.get('title');
+  const priceValue = formData.get('price');
   const rawData = {
     title: title,
     slug: slugify(title), // This part was already correct
     description: formData.get('description'),
+    price: priceValue ? parseFloat(priceValue) : null,
     is_available: formData.get('is_available') === 'on',
     image_urls: imageUrls.length > 0 ? imageUrls : null,
     user_id: user.id,
@@ -89,13 +109,72 @@ export async function updateListingAction(id, prevState, formData) {
     return { message: 'Authentication Error: You must be logged in to update a listing.' };
   }
 
-  // CHANGE: Generate a new slug when the title is updated
+  // --- Get current images from form data ---
+  const currentImagesJson = formData.get('current_images');
+  let currentImages = [];
+  if (currentImagesJson) {
+    try {
+      currentImages = JSON.parse(currentImagesJson);
+    } catch (e) {
+      console.error('Failed to parse current images:', e);
+    }
+  }
+
+  // --- File Upload Logic for new images ---
+  const newImages = formData.getAll('images').filter(file => file.size > 0);
+  let newImageUrls = [];
+
+  if (newImages.length > 0) {
+    // Create service role client for storage operations to bypass RLS
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SECRET_KEY
+    );
+
+    for (const image of newImages) {
+      // Validate file type
+      if (!image.type.startsWith('image/')) {
+        return { message: `Invalid file type: ${image.name}. Please upload only image files.` };
+      }
+
+      // Convert File to ArrayBuffer for proper upload
+      const arrayBuffer = await image.arrayBuffer();
+      const fileName = `${Date.now()}-${image.name}`;
+      
+      const { data, error } = await serviceSupabase.storage
+        .from('listing-images') 
+        .upload(fileName, arrayBuffer, {
+          contentType: image.type,
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Storage Error:', error);
+        return { message: `Failed to upload image: ${error.message}` };
+      }
+      
+      const { data: { publicUrl } } = serviceSupabase.storage
+        .from('listing-images')
+        .getPublicUrl(data.path);
+        
+      newImageUrls.push(publicUrl);
+    }
+  }
+
+  // --- Combine current images with new images ---
+  const finalImageUrls = [...currentImages, ...newImageUrls];
+
+  // --- Prepare and Validate Data ---
   const title = formData.get('title');
+  const priceValue = formData.get('price');
   const rawData = {
     title: title,
     slug: slugify(title),
     description: formData.get('description'),
+    price: priceValue ? parseFloat(priceValue) : null,
     is_available: formData.get('is_available') === 'on',
+    image_urls: finalImageUrls.length > 0 ? finalImageUrls : null,
   };
 
   // We use .partial() because not all schema fields are being submitted here (e.g., user_id)
@@ -106,7 +185,17 @@ export async function updateListingAction(id, prevState, formData) {
   }
   
   try {
-    await updateListing(supabase, id, validatedFields.data);
+    const updatedListing = await updateListing(supabase, id, validatedFields.data);
+    
+    // CHANGE: Updated revalidation and return a success message with new slug
+    revalidatePath('/admin/listings', 'layout'); // This revalidates the list and all slug-based detail pages.
+    revalidatePath('/listings', 'layout'); // Also revalidate public pages if they exist
+
+    return { 
+      success: true, 
+      message: 'Listing updated successfully!',
+      newSlug: updatedListing.slug // Return the new slug for redirect
+    };
   } catch (error) {
     // CHANGE: Add specific error handling for duplicate slugs
     if (error.code === '23505') { 
@@ -114,12 +203,6 @@ export async function updateListingAction(id, prevState, formData) {
     }
     return { message: `Database Error: ${error.message}` };
   }
-
-  // CHANGE: Updated revalidation and return a success message instead of redirecting
-  revalidatePath('/admin/listings', 'layout'); // This revalidates the list and all slug-based detail pages.
-  revalidatePath('/listings', 'layout'); // Also revalidate public pages if they exist
-
-  return { success: true, message: 'Listing updated successfully!' };
 }
 
 // NO CHANGES NEEDED for deleteListingAction as it operates on the ID.
