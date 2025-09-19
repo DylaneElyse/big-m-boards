@@ -9,13 +9,11 @@ const ProtectedRoute = ({ children, fallback = null }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect if we've initialized and there's no user
     if (initialized && !loading && !user) {
       router.push('/login');
     }
   }, [user, loading, initialized, router]);
 
-  // Show loading state while checking authentication
   if (!initialized || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -24,7 +22,6 @@ const ProtectedRoute = ({ children, fallback = null }) => {
     );
   }
 
-  // If not authenticated, show fallback or nothing (redirect will happen)
   if (!user) {
     return fallback || (
       <div className="flex items-center justify-center min-h-screen">
@@ -36,7 +33,6 @@ const ProtectedRoute = ({ children, fallback = null }) => {
     );
   }
 
-  // User is authenticated, render the protected content
   return children;
 };
 

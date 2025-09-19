@@ -1,5 +1,3 @@
-// /app/admin/listings/[slug]/page.js
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -7,7 +5,6 @@ import { createClient } from '@/utils/supabase/server';
 import { getListingBySlug } from '@/lib/supabase/api';
 import ImageGallery from '@/components/ImageGallery';
 
-// This line is critical to prevent build errors on dynamic routes
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
@@ -15,7 +12,6 @@ export async function generateMetadata({ params }) {
   const supabase = await createClient();
   const listing = await getListingBySlug(supabase, slug);
 
-  // THE FIX (Part 1): Add the safety check to metadata generation
   if (!listing) {
     return { title: 'Listing Not Found' };
   }
@@ -29,12 +25,11 @@ export default async function AdminListingDetailPage({ params }) {
   const supabase = await createClient();
   const listing = await getListingBySlug(supabase, slug);
 
-  // THE FIX (Part 2): Add the critical safety check to the page component
   if (!listing) {
-    notFound(); // This will immediately stop rendering and show the 404 page
+    notFound();
+    return null;
   }
 
-  // This code will now ONLY run if 'listing' is a valid object
   const creationDate = new Date(listing.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -59,7 +54,6 @@ export default async function AdminListingDetailPage({ params }) {
       {/* Page Header */}
       <div className="flex justify-between items-start gap-4 mb-8">
         <div>
-            {/* This line will no longer error because `listing` is guaranteed to exist */}
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
               {listing.title}
             </h1>
@@ -70,7 +64,7 @@ export default async function AdminListingDetailPage({ params }) {
         
         {/* Edit Button */}
         <Link
-          href={`/admin/listings/edit/${listing.id}`} // Use the stable ID for the edit link
+          href={`/admin/listings/edit/${listing.id}`} 
           className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           Edit Listing
@@ -79,7 +73,7 @@ export default async function AdminListingDetailPage({ params }) {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-        {/* Image Section - Remove constraining aspect-square and border */}
+        {/* Image Section */}
         <div className="w-full">
           <ImageGallery 
             images={listing.image_urls ? JSON.parse(JSON.stringify(listing.image_urls)) : []} 
@@ -91,10 +85,10 @@ export default async function AdminListingDetailPage({ params }) {
         <div className="flex flex-col gap-y-6">
             <h2 className="text-sm font-medium text-gray-500">Status</h2>
             <span className={`mt-1 inline-block px-3 py-1 text-sm font-semibold rounded-full ${
-                   listing.is_available 
-                     ? 'bg-green-100 text-green-800' 
-                     : 'bg-red-100 text-red-800'
-                 }`}
+                  listing.is_available 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}
             >
               {listing.is_available ? 'Available' : 'Unavailable'}
             </span>

@@ -1,13 +1,9 @@
-// /app/listings/page.js
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { getAllListings } from '@/lib/supabase/api';
 import ContactButton from '@/components/ContactButton';
 
-// This is a Server Component, so we can make it async
 export default async function ListingsPage() {
-  // 1. Fetch data directly on the server
   const listings = await getAllListings();
 
   return (
@@ -21,7 +17,6 @@ export default async function ListingsPage() {
         </div>
       </div>
 
-      {/* 2. Handle the case where there are no listings */}
       {!listings || listings.length === 0 ? (
         <div className="text-center py-16">
             <h3 className="text-lg font-medium text-gray-900">No listings found</h3>
@@ -30,7 +25,6 @@ export default async function ListingsPage() {
             </p>
         </div>
       ) : (
-        // 3. Map over the listings and render a card for each one
         <div className="grid grid-cols-1 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6">
           {listings.map((listing) => (
             <Link 
@@ -80,7 +74,6 @@ export default async function ListingsPage() {
   );
 }
 
-// Optional: Add metadata for the page
 export const metadata = {
   title: 'All Listings',
   description: 'Browse all available listings.',

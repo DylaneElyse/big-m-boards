@@ -1,4 +1,3 @@
-// /lib/utils.js
 export default function slugify(text) {
   if (!text) return '';
   return text

@@ -1,15 +1,11 @@
-// /components/ImageGallery.js
-
 "use client";
 
 import { useState } from 'react';
 import Image from 'next/image';
 
 export default function ImageGallery({ images, altText }) {
-  // Use the first image as the default active image
   const [activeImage, setActiveImage] = useState(images && images.length > 0 ? images[0] : null);
 
-  // If there are no images or the array is empty, show a placeholder.
   if (!images || images.length === 0) {
     return (
       <div className="relative aspect-square w-full rounded-lg overflow-hidden border bg-gray-100 flex items-center justify-center">
@@ -29,7 +25,7 @@ export default function ImageGallery({ images, altText }) {
           height={600}
           sizes="(max-width: 768px) 100vw, 50vw"
           className="w-full h-auto object-contain transition-opacity duration-300"
-          priority // Load the main image first
+          priority
         />
       </div>
 

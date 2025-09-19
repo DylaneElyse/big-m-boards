@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Get initial session
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -43,7 +42,6 @@ export const AuthProvider = ({ children }) => {
 
     getInitialSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -92,7 +90,6 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
       
-      // The onAuthStateChange listener will handle the redirect
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;

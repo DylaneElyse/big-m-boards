@@ -17,13 +17,11 @@ const Header = () => {
       await signOut();
     } catch (error) {
       console.error('Logout error:', error);
-      // The signOut function will handle the redirect
     } finally {
       setIsLoggingOut(false);
     }
   };
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -46,7 +44,7 @@ const Header = () => {
 
   return (
     <header className="flex items-center px-3 sm:px-6 lg:px-8 py-6 sm:py-6 hover:cursor-pointer bg-white border-b border-gray-200 sticky top-0 z-50">
-      {/* Logo - absolutely centered */}
+      {/* Logo */}
       <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center py-4">
         <Link href="/admin/dashboard" className="flex items-center text-xl sm:text-2xl font-bold text-gray-800 hover:opacity-80 focus:outline-none">
           <Image 
@@ -59,7 +57,7 @@ const Header = () => {
         </Link>
       </div>
 
-      {/* Menu Button - positioned on the right */}
+      {/* Menu Button */}
       <div className="ml-auto" ref={menuRef}>
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}

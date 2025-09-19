@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { getDashboardStats, getRecentListings } from '@/lib/supabase/api';
 
-// Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-  // Fetch analytics data
   const stats = await getDashboardStats();
   const recentListings = await getRecentListings(5);
 

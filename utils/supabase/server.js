@@ -13,9 +13,6 @@ export async function createClient() {
           try {
             return cookieStore.get(name)?.value
           } catch (error) {
-            // This error is expected when cookies are not available,
-            // such as in a Server Component that is prerendered.
-            // We can safely ignore it.
             return undefined
           }
         },
@@ -23,18 +20,12 @@ export async function createClient() {
           try {
             cookieStore.set({ name, value, ...options })
           } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
         remove(name, options) {
           try {
             cookieStore.set({ name, value: '', ...options })
           } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
       },

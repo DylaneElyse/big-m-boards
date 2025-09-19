@@ -5,78 +5,60 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createListingAction } from '@/app/actions';
 
-// The initial state for our form's response
 const initialState = { message: null, errors: {}, success: false };
 
 export default function CreateListingForm() {
-  // State for the server action's response
   const [formState, setFormState] = useState(initialState);
-  // State for managing the actual File objects to be uploaded
   const [selectedFiles, setSelectedFiles] = useState([]);
-  // State for the temporary URLs used for previews
   const [previews, setPreviews] = useState([]);
-  // State to manually track submission status
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // --- NEW LOGIC: Handle appending new files ---
   const handleImageChange = (e) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
 
-      // Append new files to our existing state
       setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
 
-      // Create new preview URLs and append them
       const newPreviews = newFiles.map(file => URL.createObjectURL(file));
       setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
     }
 
-    // Clear the file input so the user can select the same file again if they remove it
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
   };
 
-  // --- NEW LOGIC: Handle removing a selected image ---
   const handleRemoveImage = (indexToRemove) => {
-    // Revoke the object URL to prevent memory leaks
     URL.revokeObjectURL(previews[indexToRemove]);
 
-    // Filter out the removed file and its preview URL
     setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
     setPreviews(prevPreviews => prevPreviews.filter((_, index) => index !== indexToRemove));
   };
   
-  // --- NEW LOGIC: Manual form submission handler ---
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
-    setFormState(initialState); // Reset previous messages
+    setFormState(initialState); 
 
-    // 1. Create FormData from the form's text fields
     const formData = new FormData(event.currentTarget);
     
-    // 2. Remove the default 'images' entry, as it only holds the last selection
     formData.delete('images');
 
-    // 3. Append all files from our state to the FormData object
     if (selectedFiles.length > 0) {
       selectedFiles.forEach(file => {
         formData.append('images', file);
       });
     }
 
-    // 4. Call the server action with the manually constructed FormData
     const result = await createListingAction(initialState, formData);
     
     setFormState(result);
     setIsSubmitting(false);
   };
   
-  // Effect to reset the form after a successful submission
   useEffect(() => {
     if (formState.success) {
       formRef.current?.reset();
@@ -85,7 +67,6 @@ export default function CreateListingForm() {
     }
   }, [formState.success, formRef]);
   
-  // A cleanup effect to prevent memory leaks when the component unmounts
   useEffect(() => {
     return () => {
       previews.forEach(URL.revokeObjectURL);
@@ -93,9 +74,8 @@ export default function CreateListingForm() {
   }, [previews]);
 
   return (
-    // We now use `onSubmit` instead of `action`
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-      {/* Title & Description Fields (no changes) */}
+      {/* Title & Description Fields */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
         <input id="title" name="title" type="text" required className="p-2 mt-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"/>

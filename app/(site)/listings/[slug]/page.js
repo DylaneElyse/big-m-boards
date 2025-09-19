@@ -1,5 +1,3 @@
-// /app/listings/[slug]/page.js
-
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -8,10 +6,8 @@ import { getListingBySlug } from '@/lib/supabase/api';
 import ImageGallery from '@/components/ImageGallery';
 import ContactButton from '@/components/ContactButton';
 
-// This line is important for dynamic pages using server functions
 export const dynamic = 'force-dynamic';
 
-// Generate dynamic metadata for the browser tab
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const supabase = await createClient();
@@ -26,14 +22,11 @@ export async function generateMetadata({ params }) {
   };
 }
 
-
 export default async function PublicListingDetailPage({ params }) {
   const { slug } = await params;
   const supabase = await createClient();
   const listing = await getListingBySlug(supabase, slug);
 
-  // THIS IS THE CRITICAL SAFETY CHECK:
-  // If the database returns no listing, show the 404 page.
   if (!listing) {
     notFound();
   }
@@ -80,10 +73,10 @@ export default async function PublicListingDetailPage({ params }) {
             <div>
               <h2 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Status</h2>
               <span className={`inline-block px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold rounded-full ${
-                     listing.is_available 
-                       ? 'bg-green-100 text-green-800' 
-                       : 'bg-red-100 text-red-800'
-                   }`}
+                    listing.is_available 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}
               >
                 {listing.is_available ? 'Available' : 'Unavailable'}
               </span>

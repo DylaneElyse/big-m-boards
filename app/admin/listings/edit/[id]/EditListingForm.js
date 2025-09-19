@@ -1,5 +1,3 @@
-// /app/admin/listings/edit/[id]/EditListingForm.js
-
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -15,119 +13,90 @@ export default function EditListingForm({ listing }) {
   const fileInputRef = useRef(null);
   const initialState = { message: null, errors: {}, success: false };
 
-  // State for the server action's response
   const [formState, setFormState] = useState(initialState);
-  // State for managing the actual File objects to be uploaded
   const [selectedFiles, setSelectedFiles] = useState([]);
-  // State for the temporary URLs used for previews
   const [previews, setPreviews] = useState([]);
-  // State to manually track submission status
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // State to track delete operation
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteClicked, setDeleteClicked] = useState(false);
-  // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  // State for current images from database
   const [currentImages, setCurrentImages] = useState(
     listing.image_urls ? JSON.parse(JSON.stringify(listing.image_urls)) : []
   );
 
-  // Handle appending new files
   const handleImageChange = (e) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
 
-      // Append new files to our existing state
       setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
 
-      // Create new preview URLs and append them
       const newPreviews = newFiles.map(file => URL.createObjectURL(file));
       setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
     }
 
-    // Clear the file input so the user can select the same file again if they remove it
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  // Handle removing a selected new image
   const handleRemoveNewImage = (indexToRemove) => {
-    // Revoke the object URL to prevent memory leaks
     URL.revokeObjectURL(previews[indexToRemove]);
 
-    // Filter out the removed file and its preview URL
     setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
     setPreviews(prevPreviews => prevPreviews.filter((_, index) => index !== indexToRemove));
   };
 
-  // Handle removing a current image
   const handleRemoveCurrentImage = (indexToRemove) => {
     setCurrentImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
-  // Manual form submission handler
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
-    setFormState(initialState); // Reset previous messages
+    setFormState(initialState);
 
-    // Create FormData from the form's text fields
     const formData = new FormData(event.currentTarget);
     
-    // Remove the default 'images' entry
     formData.delete('images');
 
-    // Append all files from our state to the FormData object
     if (selectedFiles.length > 0) {
       selectedFiles.forEach(file => {
         formData.append('images', file);
       });
     }
 
-    // Add current images as a JSON string so backend knows what to keep
     formData.append('current_images', JSON.stringify(currentImages));
 
-    // Call the server action with the manually constructed FormData
     const result = await updateListingAction(listing.id, initialState, formData);
     
     setFormState(result);
     setIsSubmitting(false);
 
-    // Handle successful update
     if (result.success) {
       alert('Listing updated successfully!');
-      // Use the new slug from the backend response, fallback to original slug
       const redirectSlug = result.newSlug || listing.slug;
       router.push(`/admin/listings/${redirectSlug}`);
     }
   };
 
-  // Show delete confirmation modal
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
   };
 
-  // Cancel delete
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
   };
 
-  // Confirm delete
   const handleDeleteConfirm = async () => {
     setShowDeleteModal(false);
     setIsDeleting(true);
     
     try {
-      // Wait for deletion to complete first
       const result = await deleteListingAction(listing.id);
       
       if (result.success) {
-        // Force a hard refresh to the listings page to ensure fresh data
         window.location.href = '/admin/listings';
       } else {
-        // If deletion failed, show error and stay on page
         setFormState({ success: false, message: `Error deleting listing: ${result.message}` });
         setIsDeleting(false);
       }
@@ -138,7 +107,6 @@ export default function EditListingForm({ listing }) {
     }
   };
 
-  // Cleanup effect to prevent memory leaks when the component unmounts
   useEffect(() => {
     return () => {
       previews.forEach(URL.revokeObjectURL);
@@ -348,17 +316,17 @@ export default function EditListingForm({ listing }) {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
+            {/* Background overlay 
             <div 
               className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
               onClick={handleDeleteCancel}
             ></div>
 
-            {/* Modal panel */}
+            {/* Modal panel 
             <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
               <div className="sm:flex sm:items-start">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -396,7 +364,7 @@ export default function EditListingForm({ listing }) {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </form>
   );
 }
