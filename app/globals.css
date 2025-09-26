@@ -82,3 +82,17 @@ select:focus {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+@layer components {
+  .sortable-ghost {
+    @apply opacity-40 bg-blue-100 border border-dashed border-blue-400;
+  }
+  
+  .sortable-chosen {
+    @apply scale-105 shadow-lg border-blue-500;
+  }
+  
+  .sortable-drag {
+    @apply opacity-80 rotate-2 shadow-xl;
+  }
+}

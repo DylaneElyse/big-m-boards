@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import Sortable from 'sortablejs';
 import { updateListingAction, deleteListingAction } from '@/app/actions';
 import { set } from 'zod';
 
@@ -11,6 +12,8 @@ export default function EditListingForm({ listing }) {
   const router = useRouter();
   const formRef = useRef(null);
   const fileInputRef = useRef(null);
+  const currentImagesGridRef = useRef(null);
+  const newImagesGridRef = useRef(null);
   const initialState = { message: null, errors: {}, success: false };
 
   const [formState, setFormState] = useState(initialState);
@@ -50,14 +53,14 @@ export default function EditListingForm({ listing }) {
     setCurrentImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
-  const moveCurrentImage = (fromIndex, toIndex) => {
+  const moveCurrentImage = useCallback((fromIndex, toIndex) => {
     if (fromIndex === toIndex) return;
 
     const newImages = [...currentImages];
     const [movedImage] = newImages.splice(fromIndex, 1);
     newImages.splice(toIndex, 0, movedImage);
     setCurrentImages(newImages);
-  };
+  }, [currentImages]);
 
   const handleMoveCurrentUp = (index) => {
     if (index > 0) {
@@ -71,7 +74,7 @@ export default function EditListingForm({ listing }) {
     }
   };
 
-  const moveNewImage = (fromIndex, toIndex) => {
+  const moveNewImage = useCallback((fromIndex, toIndex) => {
     if (fromIndex === toIndex) return;
 
     const newFiles = [...selectedFiles];
@@ -85,7 +88,7 @@ export default function EditListingForm({ listing }) {
 
     setSelectedFiles(newFiles);
     setPreviews(newPreviews);
-  };
+  }, [selectedFiles, previews]);
 
   const handleMoveNewUp = (index) => {
     if (index > 0) {
@@ -156,6 +159,84 @@ export default function EditListingForm({ listing }) {
     }
   };
 
+  // SortableJS configuration for current images
+  useEffect(() => {
+    if (currentImagesGridRef.current && currentImages.length > 1) {
+      const sortable = new Sortable(currentImagesGridRef.current, {
+        animation: 200,
+        delay: 150,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 3,
+        
+        forceFallback: false,
+        fallbackTolerance: 3,
+        dragoverBubble: false,
+        removeCloneOnHide: true,
+        
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        
+        preventOnFilter: false,
+        filter: '.no-drag',
+        
+        scroll: true,
+        scrollSensitivity: 30,
+        scrollSpeed: 10,
+
+        onEnd: (evt) => {
+          const { oldIndex, newIndex } = evt;
+          if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+            moveCurrentImage(oldIndex, newIndex);
+          }
+        },
+      });
+
+      return () => {
+        sortable.destroy();
+      };
+    }
+  }, [currentImages, moveCurrentImage]);
+
+  // SortableJS configuration for new images
+  useEffect(() => {
+    if (newImagesGridRef.current && previews.length > 1) {
+      const sortable = new Sortable(newImagesGridRef.current, {
+        animation: 200,
+        delay: 150,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 3,
+        
+        forceFallback: false,
+        fallbackTolerance: 3,
+        dragoverBubble: false,
+        removeCloneOnHide: true,
+        
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        
+        preventOnFilter: false,
+        filter: '.no-drag',
+        
+        scroll: true,
+        scrollSensitivity: 30,
+        scrollSpeed: 10,
+
+        onEnd: (evt) => {
+          const { oldIndex, newIndex } = evt;
+          if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+            moveNewImage(oldIndex, newIndex);
+          }
+        },
+      });
+
+      return () => {
+        sortable.destroy();
+      };
+    }
+  }, [previews, selectedFiles, moveNewImage]);
+
   useEffect(() => {
     return () => {
       previews.forEach(URL.revokeObjectURL);
@@ -212,11 +293,14 @@ export default function EditListingForm({ listing }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Current Images</label>
           <div className="mb-2 text-sm text-gray-600">
-            {currentImages.length > 1 && "Tap the arrows to reorder images. The first image will be the main thumbnail."}
+            {currentImages.length > 1 && "Long-press (or click and drag) to reorder images. The first image will be the main thumbnail."}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div ref={currentImagesGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
             {currentImages.map((imageUrl, index) => (
-              <div key={index} className="relative group border rounded-md overflow-hidden bg-white">
+              <div
+                key={imageUrl}
+                className={`relative group border rounded-md overflow-hidden bg-white transition-shadow duration-200 ${currentImages.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              >
                 <div className="aspect-square w-full relative">
                   <Image
                     src={imageUrl}
@@ -232,42 +316,18 @@ export default function EditListingForm({ listing }) {
                   {/* Remove button */}
                   <button
                     type="button"
-                    onClick={() => handleRemoveCurrentImage(index)}
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveCurrentImage(index);
+                    }}
+                    className="no-drag absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors z-10 opacity-0 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 touch-target"
                     aria-label="Remove current image"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 sm:w-4 sm:h-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-                {/* Reorder controls */}
-                {currentImages.length > 1 && (
-                  <div className="flex justify-center gap-2 p-2 bg-gray-50">
-                    <button
-                      type="button"
-                      onClick={() => handleMoveCurrentUp(index)}
-                      disabled={index === 0}
-                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      aria-label="Move image left"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMoveCurrentDown(index)}
-                      disabled={index === currentImages.length - 1}
-                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      aria-label="Move image right"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -300,11 +360,14 @@ export default function EditListingForm({ listing }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">New Images to Add</label>
           <div className="mb-2 text-sm text-gray-600">
-            {previews.length > 1 && "Tap the arrows to reorder new images. These will be added after current images."}
+            {previews.length > 1 && "Long-press (or click and drag) to reorder new images. These will be added after current images."}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div ref={newImagesGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
             {previews.map((src, index) => (
-              <div key={index} className="relative group border border-indigo-300 rounded-md overflow-hidden bg-white">
+              <div
+                key={src}
+                className={`relative group border border-indigo-300 rounded-md overflow-hidden bg-white transition-shadow duration-200 ${previews.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              >
                 <div className="aspect-square w-full relative">
                   <Image
                     src={src}
@@ -320,42 +383,18 @@ export default function EditListingForm({ listing }) {
                   {/* Remove button */}
                   <button
                     type="button"
-                    onClick={() => handleRemoveNewImage(index)}
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveNewImage(index);
+                    }}
+                    className="no-drag absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors z-10 opacity-0 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 touch-target"
                     aria-label="Remove new image"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 sm:w-4 sm:h-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-                {/* Reorder controls */}
-                {previews.length > 1 && (
-                  <div className="flex justify-center gap-2 p-2 bg-indigo-50">
-                    <button
-                      type="button"
-                      onClick={() => handleMoveNewUp(index)}
-                      disabled={index === 0}
-                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      aria-label="Move new image left"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMoveNewDown(index)}
-                      disabled={index === previews.length - 1}
-                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      aria-label="Move new image right"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
           </div>
