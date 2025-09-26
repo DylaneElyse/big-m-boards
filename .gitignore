@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+storage_policies.sql
+DEPLOYMENT_FIX_INSTRUCTIONS.md
