@@ -29,7 +29,7 @@ export default function PublicListingsClient({ initialData }) {
   const currentFilter = searchParams.get('filter') || 'all';
 
   const sortOptions = [
-    { value: 'created_at', label: 'Newest First', orders: ['desc', 'asc'] },
+    { value: 'created_at', label: 'Date Created', orders: ['desc', 'asc'] },
     { value: 'title', label: 'Title', orders: ['asc', 'desc'] },
     { value: 'price', label: 'Price', orders: ['asc', 'desc'] }
   ];

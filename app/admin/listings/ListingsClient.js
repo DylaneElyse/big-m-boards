@@ -86,27 +86,44 @@ export default function ListingsClient({ initialData }) {
   };
 
   const handlePageChange = (page) => {
+    console.log('=== ADMIN PAGINATION DEBUG ===');
+    console.log('Requested page:', page);
+    console.log('Current page:', currentPage);
+    console.log('Total pages:', pagination.totalPages);
+    console.log('Has prev page:', pagination.hasPrevPage);
+    console.log('Has next page:', pagination.hasNextPage);
+    
     // Ensure page is within valid range
     const validPage = Math.max(1, Math.min(page, pagination.totalPages));
+    console.log('Valid page calculated:', validPage);
     
-    // Use router.push directly with explicit URL - ALWAYS include page parameter
-    const params = new URLSearchParams();
+    // Simple approach - just use window.location
+    const params = new URLSearchParams(window.location.search);
     params.set('page', validPage.toString());
     
     if (currentSort !== 'created_at') {
       params.set('sort', currentSort);
+    } else {
+      params.delete('sort');
     }
     
     if (currentOrder !== 'desc') {
       params.set('order', currentOrder);
+    } else {
+      params.delete('order');
     }
     
     if (currentFilter !== 'all') {
       params.set('filter', currentFilter);
+    } else {
+      params.delete('filter');
     }
     
-    const newURL = `/admin/listings?${params.toString()}`;
-    router.push(newURL);
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    console.log('Navigating to:', newURL);
+    
+    // Use window.location instead of router
+    window.location.href = newURL;
   };
 
   // Fetch data when URL parameters change
