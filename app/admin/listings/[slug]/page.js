@@ -90,7 +90,7 @@ export default async function AdminListingDetailPage({ params }) {
                     : 'bg-red-100 text-red-800'
                 }`}
             >
-              {listing.is_available ? 'Available' : 'Unavailable'}
+              {listing.is_available ? 'Available' : 'Sold'}
             </span>
             {/* Price Section */}
             {listing.price && (

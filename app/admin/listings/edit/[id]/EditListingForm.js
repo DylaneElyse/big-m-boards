@@ -50,6 +50,55 @@ export default function EditListingForm({ listing }) {
     setCurrentImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
+  const moveCurrentImage = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+
+    const newImages = [...currentImages];
+    const [movedImage] = newImages.splice(fromIndex, 1);
+    newImages.splice(toIndex, 0, movedImage);
+    setCurrentImages(newImages);
+  };
+
+  const handleMoveCurrentUp = (index) => {
+    if (index > 0) {
+      moveCurrentImage(index, index - 1);
+    }
+  };
+
+  const handleMoveCurrentDown = (index) => {
+    if (index < currentImages.length - 1) {
+      moveCurrentImage(index, index + 1);
+    }
+  };
+
+  const moveNewImage = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+
+    const newFiles = [...selectedFiles];
+    const newPreviews = [...previews];
+
+    const [movedFile] = newFiles.splice(fromIndex, 1);
+    const [movedPreview] = newPreviews.splice(fromIndex, 1);
+
+    newFiles.splice(toIndex, 0, movedFile);
+    newPreviews.splice(toIndex, 0, movedPreview);
+
+    setSelectedFiles(newFiles);
+    setPreviews(newPreviews);
+  };
+
+  const handleMoveNewUp = (index) => {
+    if (index > 0) {
+      moveNewImage(index, index - 1);
+    }
+  };
+
+  const handleMoveNewDown = (index) => {
+    if (index < previews.length - 1) {
+      moveNewImage(index, index + 1);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -158,30 +207,67 @@ export default function EditListingForm({ listing }) {
         {formState.errors?.price && <p className="mt-2 text-sm text-red-600">{formState.errors.price[0]}</p>}
       </div>
 
-      {/* Current Images Display with Remove Buttons */}
+      {/* Current Images Display with Reorder and Remove Controls */}
       {currentImages.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Current Images</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="mb-2 text-sm text-gray-600">
+            {currentImages.length > 1 && "Tap the arrows to reorder images. The first image will be the main thumbnail."}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {currentImages.map((imageUrl, index) => (
-              <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
-                <Image
-                  src={imageUrl}
-                  alt={`Current image ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveCurrentImage(index)}
-                  className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
-                  aria-label="Remove current image"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                </button>
+              <div key={index} className="relative group border rounded-md overflow-hidden bg-white">
+                <div className="aspect-square w-full relative">
+                  <Image
+                    src={imageUrl}
+                    alt={`Current image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                  />
+                  {/* Image number indicator */}
+                  <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                    {index + 1}
+                  </div>
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCurrentImage(index)}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    aria-label="Remove current image"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                {/* Reorder controls */}
+                {currentImages.length > 1 && (
+                  <div className="flex justify-center gap-2 p-2 bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveCurrentUp(index)}
+                      disabled={index === 0}
+                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move image left"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveCurrentDown(index)}
+                      disabled={index === currentImages.length - 1}
+                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move image right"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -203,33 +289,73 @@ export default function EditListingForm({ listing }) {
           onChange={handleImageChange}
           className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
         />
+        <p className="mt-1 text-xs text-gray-500">
+          Supported formats: JPEG, PNG, GIF, WebP. Maximum file size: 10MB per image.
+        </p>
         {formState.errors?.image_urls && <p className="mt-2 text-sm text-red-600">{formState.errors.image_urls[0]}</p>}
       </div>
 
-      {/* New Image Previews with Remove Buttons */}
+      {/* New Image Previews with Reorder and Remove Controls */}
       {previews.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">New Images to Add</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="mb-2 text-sm text-gray-600">
+            {previews.length > 1 && "Tap the arrows to reorder new images. These will be added after current images."}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {previews.map((src, index) => (
-              <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border border-indigo-300">
-                <Image
-                  src={src}
-                  alt={`Preview ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveNewImage(index)}
-                  className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
-                  aria-label="Remove new image"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                </button>
+              <div key={index} className="relative group border border-indigo-300 rounded-md overflow-hidden bg-white">
+                <div className="aspect-square w-full relative">
+                  <Image
+                    src={src}
+                    alt={`New image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                  />
+                  {/* Image number indicator */}
+                  <div className="absolute top-2 left-2 bg-indigo-600 bg-opacity-80 text-white text-xs px-2 py-1 rounded">
+                    New {index + 1}
+                  </div>
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveNewImage(index)}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    aria-label="Remove new image"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                {/* Reorder controls */}
+                {previews.length > 1 && (
+                  <div className="flex justify-center gap-2 p-2 bg-indigo-50">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveNewUp(index)}
+                      disabled={index === 0}
+                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move new image left"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveNewDown(index)}
+                      disabled={index === previews.length - 1}
+                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move new image right"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

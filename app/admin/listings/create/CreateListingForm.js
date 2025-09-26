@@ -37,6 +37,35 @@ export default function CreateListingForm() {
     setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
     setPreviews(prevPreviews => prevPreviews.filter((_, index) => index !== indexToRemove));
   };
+
+  const moveImage = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+
+    const newFiles = [...selectedFiles];
+    const newPreviews = [...previews];
+
+    // Move the items
+    const [movedFile] = newFiles.splice(fromIndex, 1);
+    const [movedPreview] = newPreviews.splice(fromIndex, 1);
+
+    newFiles.splice(toIndex, 0, movedFile);
+    newPreviews.splice(toIndex, 0, movedPreview);
+
+    setSelectedFiles(newFiles);
+    setPreviews(newPreviews);
+  };
+
+  const handleMoveUp = (index) => {
+    if (index > 0) {
+      moveImage(index, index - 1);
+    }
+  };
+
+  const handleMoveDown = (index) => {
+    if (index < previews.length - 1) {
+      moveImage(index, index + 1);
+    }
+  };
   
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -117,33 +146,75 @@ export default function CreateListingForm() {
           onChange={handleImageChange}
           className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
         />
+        <p className="mt-1 text-xs text-gray-500">
+          Supported formats: JPEG, PNG, GIF, WebP. Maximum file size: 10MB per image.
+        </p>
         {formState.errors?.image_urls && <p className="mt-2 text-sm text-red-600">{formState.errors.image_urls[0]}</p>}
       </div>
 
-      {/* Image Preview Grid with Remove Buttons */}
+      {/* Image Preview Grid with Reorder and Remove Controls */}
       {previews.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {previews.map((src, index) => (
-            <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
-              <Image
-                src={src}
-                alt={`Preview ${index + 1}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-              />
-              <button
-                type="button"
-                onClick={() => handleRemoveImage(index)}
-                className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
-                aria-label="Remove image"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          ))}
+        <div className="mt-4">
+          <div className="mb-2 text-sm text-gray-600">
+            {previews.length > 1 && "Tap the arrows to reorder images. The first image will be the main thumbnail."}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {previews.map((src, index) => (
+              <div key={index} className="relative group border rounded-md overflow-hidden bg-white">
+                <div className="aspect-square w-full relative">
+                  <Image
+                    src={src}
+                    alt={`Preview ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                  />
+                  {/* Image number indicator */}
+                  <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                    {index + 1}
+                  </div>
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(index)}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    aria-label="Remove image"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                {/* Reorder controls */}
+                {previews.length > 1 && (
+                  <div className="flex justify-center gap-2 p-2 bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveUp(index)}
+                      disabled={index === 0}
+                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move image left"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveDown(index)}
+                      disabled={index === previews.length - 1}
+                      className="flex items-center justify-center w-8 h-8 rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move image right"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

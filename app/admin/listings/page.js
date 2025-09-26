@@ -32,16 +32,24 @@ export default async function ListingsPage() {
             <Link 
               href={`/admin/listings/${listing.slug}`} 
               key={listing.id} 
-              className="group block border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-200"
+              className={`group block border rounded-lg overflow-hidden shadow-sm transition-all duration-200 ${
+                listing.is_available 
+                  ? 'border-gray-200 hover:shadow-lg' 
+                  : 'border-gray-300 opacity-75 hover:opacity-90'
+              }`}
             >
-              <div className="relative w-full h-48 bg-gray-200">
+              <div className="relative w-full aspect-[3/4] bg-gray-200 rounded-t-lg overflow-hidden">
                 {listing.image_urls && listing.image_urls.length > 0 ? (
                   <Image
                     src={listing.image_urls[0]}
                     alt={listing.title}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover object-center group-hover:opacity-75 transition-opacity"
+                    className={`object-cover transition-all duration-200 ${
+                      listing.is_available 
+                        ? 'group-hover:opacity-75' 
+                        : 'grayscale-[50%] group-hover:grayscale-[25%]'
+                    }`}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500">
@@ -50,10 +58,14 @@ export default async function ListingsPage() {
                 )}
               </div>
               <div className="p-4 flex flex-col flex-grow">
-                <h3 className="text-lg font-semibold text-gray-800 truncate">
+                <h3 className={`text-lg font-semibold truncate ${
+                  listing.is_available ? 'text-gray-800' : 'text-gray-500'
+                }`}>
                     {listing.title}
                 </h3>
-                <p className="mt-2 text-sm text-gray-600 line-clamp-3 flex-grow">
+                <p className={`mt-2 text-sm line-clamp-3 flex-grow ${
+                  listing.is_available ? 'text-gray-600' : 'text-gray-400'
+                }`}>
                     {listing.description}
                 </p>
                 <div className="mt-4">
@@ -63,7 +75,7 @@ export default async function ListingsPage() {
                       : 'bg-red-100 text-red-800'
                     }`}
                   >
-                    {listing.is_available ? 'Available' : 'Unavailable'}
+                    {listing.is_available ? 'Available' : 'Sold'}
                   </span>
                 </div>
               </div>

@@ -78,7 +78,7 @@ export default async function PublicListingDetailPage({ params }) {
                       : 'bg-red-100 text-red-800'
                   }`}
               >
-                {listing.is_available ? 'Available' : 'Unavailable'}
+                {listing.is_available ? 'Available' : 'Sold'}
               </span>
             </div>
 
@@ -100,8 +100,15 @@ export default async function PublicListingDetailPage({ params }) {
             </p>
           </div>
 
-          {/* Contact Button - Always visible on mobile */}
+          {/* Contact Section - Always visible */}
           <div className="pt-4 border-t border-gray-200">
+            {!listing.is_available && (
+              <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                <p className="text-sm text-orange-800 font-medium text-center">
+                  Unfortunately this is no longer available. Contact me for something similar!
+                </p>
+              </div>
+            )}
             <ContactButton size="large" className="w-full" />
           </div>
         </div>
