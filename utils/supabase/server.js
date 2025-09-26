@@ -46,8 +46,12 @@ export async function createClient() {
 // Service role client for storage operations
 export function createServiceClient() {
   // Handle both Vercel auto-generated and manual environment variable names
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables for service client')
+  }
   
   return createSupabaseClient(
     supabaseUrl,
