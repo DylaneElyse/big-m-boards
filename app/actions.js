@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createServiceClient } from '@/utils/supabase/server';
 import slugify from '@/utils/createSlug'; 
 import {
   createListing,
@@ -22,6 +22,8 @@ export async function createListingAction(prevState, formData) {
   const imageUrls = [];
 
   if (images.length > 0) {
+    const serviceSupabase = createServiceClient();
+    
     for (const image of images) {
       if (!image.type.startsWith('image/')) {
         return { message: `Invalid file type: ${image.name}. Please upload only image files.` };
@@ -30,7 +32,7 @@ export async function createListingAction(prevState, formData) {
       const arrayBuffer = await image.arrayBuffer();
       const fileName = `${Date.now()}-${image.name}`;
       
-      const { data, error } = await supabase.storage
+      const { data, error } = await serviceSupabase.storage
         .from('listing-images') 
         .upload(fileName, arrayBuffer, {
           contentType: image.type,
@@ -42,7 +44,7 @@ export async function createListingAction(prevState, formData) {
         return { message: `Failed to upload image: ${error.message}` };
       }
       
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = serviceSupabase.storage
         .from('listing-images')
         .getPublicUrl(data.path);
         
@@ -108,6 +110,8 @@ export async function updateListingAction(id, prevState, formData) {
   let newImageUrls = [];
 
   if (newImages.length > 0) {
+    const serviceSupabase = createServiceClient();
+    
     for (const image of newImages) {
       if (!image.type.startsWith('image/')) {
         return { message: `Invalid file type: ${image.name}. Please upload only image files.` };
@@ -116,7 +120,7 @@ export async function updateListingAction(id, prevState, formData) {
       const arrayBuffer = await image.arrayBuffer();
       const fileName = `${Date.now()}-${image.name}`;
       
-      const { data, error } = await supabase.storage
+      const { data, error } = await serviceSupabase.storage
         .from('listing-images') 
         .upload(fileName, arrayBuffer, {
           contentType: image.type,
@@ -128,7 +132,7 @@ export async function updateListingAction(id, prevState, formData) {
         return { message: `Failed to upload image: ${error.message}` };
       }
       
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = serviceSupabase.storage
         .from('listing-images')
         .getPublicUrl(data.path);
         
