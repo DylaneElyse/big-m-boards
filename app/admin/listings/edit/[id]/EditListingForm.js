@@ -147,7 +147,8 @@ export default function EditListingForm({ listing }) {
       const result = await deleteListingAction(listing.id);
       
       if (result.success) {
-        window.location.href = '/admin/listings';
+        // Use Next.js router for smoother navigation
+        router.push('/admin/listings');
       } else {
         setFormState({ success: false, message: `Error deleting listing: ${result.message}` });
         setIsDeleting(false);
