@@ -22,7 +22,7 @@ export async function createListingAction(prevState, formData) {
   const imageUrls = [];
 
   if (images.length > 0) {
-    const serviceSupabase = createServiceClient();
+    const serviceSupabase = await createServiceClient();
     
     for (const image of images) {
       if (!image.type.startsWith('image/')) {
@@ -110,7 +110,7 @@ export async function updateListingAction(id, prevState, formData) {
   let newImageUrls = [];
 
   if (newImages.length > 0) {
-    const serviceSupabase = createServiceClient();
+    const serviceSupabase = await createServiceClient();
     
     for (const image of newImages) {
       if (!image.type.startsWith('image/')) {
