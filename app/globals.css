@@ -60,6 +60,73 @@ body {
   }
 }
 
+/* iOS-specific text contrast improvements */
+@supports (-webkit-touch-callout: none) {
+  /* Target iOS Safari specifically */
+  
+  /* Form labels - make them darker for better readability */
+  label {
+    color: #1f2937 !important; /* text-gray-800 equivalent */
+    font-weight: 500 !important;
+  }
+  
+  /* Form input text - ensure it's dark enough */
+  input, textarea, select {
+    color: #111827 !important; /* text-gray-900 equivalent */
+  }
+  
+  /* Placeholder text - make it darker but still distinguishable */
+  input::placeholder, textarea::placeholder {
+    color: #6b7280 !important; /* text-gray-500 equivalent but forced */
+    opacity: 1 !important;
+  }
+  
+  /* Help text and descriptions */
+  .text-gray-500, .text-gray-600 {
+    color: #4b5563 !important; /* text-gray-600 equivalent - darker than gray-500 */
+  }
+  
+  /* File input text */
+  input[type="file"] {
+    color: #374151 !important; /* text-gray-700 equivalent but darker */
+  }
+  
+  /* Small text elements */
+  .text-xs, .text-sm {
+    color: #374151 !important; /* Ensure small text is readable */
+  }
+}
+
+/* Additional iOS form improvements */
+@media (max-width: 640px) and (-webkit-min-device-pixel-ratio: 2) {
+  /* High-DPI iOS devices */
+  
+  /* Ensure form elements have sufficient contrast */
+  input, textarea, select {
+    background-color: #ffffff !important;
+    border-color: #d1d5db !important;
+    color: #111827 !important;
+  }
+  
+  /* Focus states should be more prominent on iOS */
+  input:focus, textarea:focus, select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  }
+  
+  /* Make sure error text is visible */
+  .text-red-600 {
+    color: #dc2626 !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Success text should also be prominent */
+  .text-green-600 {
+    color: #16a34a !important;
+    font-weight: 500 !important;
+  }
+}
+
 /* Smooth scrolling for better UX */
 html {
   scroll-behavior: smooth;
