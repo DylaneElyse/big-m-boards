@@ -46,11 +46,13 @@ export default function ListingsClient({ initialData }) {
     // Always set page parameter explicitly
     newParams.set('page', params.page || currentPage.toString());
     
-    if (params.sort && params.sort !== 'created_at') {
+    // Always include sort parameter
+    if (params.sort) {
       newParams.set('sort', params.sort);
     }
     
-    if (params.order && params.order !== 'desc') {
+    // Always include order parameter
+    if (params.order) {
       newParams.set('order', params.order);
     }
     
@@ -147,6 +149,13 @@ export default function ListingsClient({ initialData }) {
         if (data.success) {
           setListings(data.listings);
           setPagination(data.pagination);
+          // Update the initialParamsRef after successful fetch
+          initialParamsRef.current = {
+            page: currentPage,
+            sort: currentSort,
+            order: currentOrder,
+            filter: currentFilter
+          };
         }
       } catch (error) {
         console.error('Error fetching listings:', error);
