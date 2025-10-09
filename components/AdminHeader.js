@@ -48,7 +48,7 @@ const Header = () => {
       <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center py-4">
         <Link href="/admin/dashboard" className="flex items-center text-xl sm:text-2xl font-bold text-gray-800 hover:opacity-80 focus:outline-none">
           <Image 
-            src="/bigmboards-logo.png" 
+            src="/horizontal-logo-red.png" 
             alt="Big M Boards Logo" 
             width={160} 
             height={64}
