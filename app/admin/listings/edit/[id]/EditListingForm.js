@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Sortable from 'sortablejs';
+import imageCompression from 'browser-image-compression';
 import { updateListingAction, deleteListingAction } from '@/app/actions';
 import { set } from 'zod';
 
@@ -23,19 +24,60 @@ export default function EditListingForm({ listing }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteClicked, setDeleteClicked] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [currentImages, setCurrentImages] = useState(
     listing.image_urls ? JSON.parse(JSON.stringify(listing.image_urls)) : []
   );
 
-  const handleImageChange = (e) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-
-      setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
-
-      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-      setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
+  const handleImageChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      return;
     }
+
+    setUploading(true);
+    const newFiles = [];
+    const newPreviews = [];
+
+    // Use a for loop to handle async operations sequentially
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        setProgress(`Compressing image ${i + 1} of ${files.length}...`);
+
+        // Compression options
+        const options = {
+          maxSizeMB: 1,              // Max file size
+          maxWidthOrHeight: 1920,    // Max dimensions
+          useWebWorker: true,        // Use a web worker for better performance
+          fileType: 'image/jpeg',    // Force output to JPEG
+        };
+        
+        const compressedFile = await imageCompression(file, options);
+        
+        // Create a new File object with the compressed blob
+        const compressedFileWithName = new File(
+          [compressedFile], 
+          file.name.replace(/\.[^/.]+$/, '.jpg'), // Change extension to .jpg
+          { type: 'image/jpeg' }
+        );
+
+        newFiles.push(compressedFileWithName);
+        const preview = URL.createObjectURL(compressedFile);
+        newPreviews.push(preview);
+
+      } catch (error) {
+        console.error('Error compressing file:', error.message);
+        alert(`Failed to compress ${file.name}. Please try again.`);
+        // Continue with other files instead of breaking
+      }
+    }
+
+    setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
+    setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
+    setUploading(false);
+    setProgress('');
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -348,11 +390,13 @@ export default function EditListingForm({ listing }) {
           accept="image/*"
           ref={fileInputRef}
           onChange={handleImageChange}
-          className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
+          disabled={uploading}
+          className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 disabled:opacity-50"
         />
         <p className="mt-1 text-xs text-gray-500">
-          Supported formats: JPEG, PNG, GIF, WebP. Maximum file size: 10MB per image.
+          Images will be automatically compressed. Supported formats: JPEG, PNG, GIF, WebP.
         </p>
+        {uploading && <p className="mt-2 text-sm text-indigo-600">{progress}</p>}
         {formState.errors?.image_urls && <p className="mt-2 text-sm text-red-600">{formState.errors.image_urls[0]}</p>}
       </div>
 
