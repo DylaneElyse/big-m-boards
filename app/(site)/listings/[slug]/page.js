@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server';
 import { getListingBySlug } from '@/lib/supabase/api';
 import ImageGallery from '@/components/ImageGallery';
 import ContactButton from '@/components/ContactButton';
+import BackButton from './BackButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,12 +42,7 @@ export default async function PublicListingDetailPage({ params }) {
     <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
       {/* Mobile-optimized header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 touch-target"
-        >
-          &larr; Back to all listings
-        </Link>
+        <BackButton />
         {/* Contact Button - Hidden on mobile, shown in details section instead */}
         <div className="hidden sm:block">
           <ContactButton size="default" />

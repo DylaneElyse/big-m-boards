@@ -212,7 +212,7 @@ export default function ListingsClient({ initialData }) {
         <div className="flex flex-wrap gap-2">
           <Link 
             href="/admin/listings/manage" 
-            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center justify-center px-4 py-2 border-2 border-gray-900 text-sm font-semibold rounded-md shadow-sm text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -221,7 +221,7 @@ export default function ListingsClient({ initialData }) {
           </Link>
           <Link 
             href="/admin/listings/create" 
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             + Create New Listing
           </Link>
@@ -299,7 +299,8 @@ export default function ListingsClient({ initialData }) {
       </div>
 
       {/* Desktop Controls */}
-      <div className="hidden sm:flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8">
+      <div className="hidden sm:flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 sm:mb-8">
+        <div className="flex flex-wrap gap-4">
         {/* Sort Controls */}
         <div className="flex flex-wrap gap-2">
           <span className="text-sm font-medium text-gray-700 self-center">Sort by:</span>
@@ -336,6 +337,61 @@ export default function ListingsClient({ initialData }) {
             </button>
           ))}
         </div>
+        </div>
+        
+        {/* Pagination - Top (Desktop only) */}
+        {pagination.totalPages > 1 && (
+          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={!pagination.hasPrevPage}
+              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="sr-only">Previous</span>
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+            
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              let pageNum;
+              if (pagination.totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (pagination.currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                pageNum = pagination.totalPages - 4 + i;
+              } else {
+                pageNum = pagination.currentPage - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                    pageNum === pagination.currentPage
+                      ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={!pagination.hasNextPage}
+              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="sr-only">Next</span>
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </nav>
+        )}
       </div>
 
       {/* Loading State */}
@@ -360,11 +416,20 @@ export default function ListingsClient({ initialData }) {
       ) : (
         <>
           <div className={`grid grid-cols-2 gap-y-6 gap-x-3 sm:gap-y-10 sm:gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${loading ? 'opacity-50' : ''}`}>
-            {listings.map((listing) => (
-              <Link 
-                href={`/admin/listings/${listing.slug}`} 
-                key={listing.id} 
-                className={`group block border rounded-lg overflow-hidden shadow-sm transition-all duration-200 ${
+            {listings.map((listing) => {
+              // Preserve current search params for back navigation
+              const params = new URLSearchParams();
+              params.set('page', currentPage.toString());
+              if (currentSort !== 'created_at') params.set('sort', currentSort);
+              if (currentOrder !== 'desc') params.set('order', currentOrder);
+              if (currentFilter !== 'all') params.set('filter', currentFilter);
+              const returnUrl = `/admin/listings?${params.toString()}`;
+              
+              return (
+                <Link 
+                  href={`/admin/listings/${listing.slug}?returnTo=${encodeURIComponent(returnUrl)}`}
+                  key={listing.id} 
+                  className={`group block border rounded-lg overflow-hidden shadow-sm transition-all duration-200 ${
                   listing.is_available 
                     ? 'border-gray-200 hover:shadow-lg' 
                     : 'border-gray-300 opacity-75 hover:opacity-90'
@@ -417,8 +482,9 @@ export default function ListingsClient({ initialData }) {
                       </span>
                     </div>
                   </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Pagination */}

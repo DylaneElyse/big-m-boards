@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { getListingBySlug } from '@/lib/supabase/api';
 import ImageGallery from '@/components/ImageGallery';
+import BackButton from './BackButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,15 +41,7 @@ export default async function AdminListingDetailPage({ params }) {
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Back Button */}
       <div className="mb-6">
-        <Link 
-          href="/admin/listings"
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-          </svg>
-          Back to all listings
-        </Link>
+        <BackButton />
       </div>
 
       {/* Page Header */}
