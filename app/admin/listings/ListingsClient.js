@@ -209,12 +209,23 @@ export default function ListingsClient({ initialData }) {
             {pagination.totalCount} total listings
           </p>
         </div>
-        <Link 
-          href="/admin/listings/create" 
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          + Create New Listing
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link 
+            href="/admin/listings/manage" 
+            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Manage & Delete
+          </Link>
+          <Link 
+            href="/admin/listings/create" 
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            + Create New Listing
+          </Link>
+        </div>
       </div>
 
       {/* Mobile Compact Controls */}
@@ -359,7 +370,7 @@ export default function ListingsClient({ initialData }) {
                     : 'border-gray-300 opacity-75 hover:opacity-90'
                 }`}
               >
-                <div className="relative w-full aspect-[3/4] bg-gray-200 rounded-t-lg overflow-hidden">
+                  <div className="relative w-full aspect-[3/4] bg-gray-200 rounded-t-lg overflow-hidden">
                   {listing.image_urls && listing.image_urls.length > 0 ? (
                     <Image
                       src={listing.image_urls[0]}
@@ -376,36 +387,36 @@ export default function ListingsClient({ initialData }) {
                     <div className="w-full h-full flex items-center justify-center text-gray-500">
                       No Image
                     </div>
-                  )}
-                </div>
-                <div className="p-4 flex flex-col flex-grow">
-                  <h3 className={`text-lg font-semibold truncate ${
-                    listing.is_available ? 'text-gray-800' : 'text-gray-500'
-                  }`}>
-                    {listing.title}
-                  </h3>
-                  {listing.price && (
-                    <p className={`text-sm font-medium mt-1 ${
-                      listing.is_available ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
-                      ${listing.price}
-                    </p>
-                  )}
-                  <p className={`mt-2 text-sm line-clamp-3 flex-grow ${
-                    listing.is_available ? 'text-gray-600' : 'text-gray-400'
-                  }`}>
-                    {listing.description}
-                  </p>
-                  <div className="mt-4">
-                    <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                      listing.is_available 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {listing.is_available ? 'Available' : 'Sold'}
-                    </span>
+                    )}
                   </div>
-                </div>
+                  <div className="p-4 flex flex-col flex-grow">
+                    <h3 className={`text-lg font-semibold truncate ${
+                      listing.is_available ? 'text-gray-800' : 'text-gray-500'
+                    }`}>
+                      {listing.title}
+                    </h3>
+                    {listing.price && (
+                      <p className={`text-sm font-medium mt-1 ${
+                        listing.is_available ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
+                        ${listing.price}
+                      </p>
+                    )}
+                    <p className={`mt-2 text-sm line-clamp-3 flex-grow ${
+                      listing.is_available ? 'text-gray-600' : 'text-gray-400'
+                    }`}>
+                      {listing.description}
+                    </p>
+                    <div className="mt-4">
+                      <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                        listing.is_available 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {listing.is_available ? 'Available' : 'Sold'}
+                      </span>
+                    </div>
+                  </div>
               </Link>
             ))}
           </div>
