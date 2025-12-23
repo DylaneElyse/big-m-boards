@@ -19,6 +19,8 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${inter.variable} ${montserrat.variable} font-sans antialiased`}>
         {children}
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
