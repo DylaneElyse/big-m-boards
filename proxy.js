@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-export async function middleware(request) {
-  // Skip middleware for static files and API routes to avoid issues
+export async function proxy(request) {
+  // Skip proxy for static files and API routes to avoid issues
   if (
     request.nextUrl.pathname.startsWith('/_next/') ||
     request.nextUrl.pathname.startsWith('/api/') ||
@@ -24,7 +24,7 @@ export async function middleware(request) {
 
     // If environment variables are missing, just continue without auth
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn('Supabase environment variables missing in middleware')
+      console.warn('Supabase environment variables missing in proxy')
       return response
     }
 
@@ -78,13 +78,13 @@ export async function middleware(request) {
 
     return response
   } catch (error) {
-    console.error('Middleware error:', error)
-    // If middleware fails, just continue without auth
+    console.error('Proxy error:', error)
+    // If proxy fails, just continue without auth
     return NextResponse.next()
   }
 }
 
-// Only run middleware on specific paths to reduce load
+// Only run proxy on specific paths to reduce load
 export const config = {
   matcher: [
     /*

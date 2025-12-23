@@ -2,6 +2,8 @@ import './globals.css';
 
 import { Inter, Montserrat } from 'next/font/google';
 
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' });
 
