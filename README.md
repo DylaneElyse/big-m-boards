@@ -21,7 +21,7 @@ Big M Boards is a web application designed to manage and showcase second-hand sn
 - **Deployment on Vercel:** Blazing fast performance and scalable hosting.
 
 ## Deployment
-Live at: [big-m-boards.vercel.app](https://big-m-boards.vercel.app)
+Live at: [big-m-boards.com](https://big-m-boards.com)
 
 ## Getting Started
 
